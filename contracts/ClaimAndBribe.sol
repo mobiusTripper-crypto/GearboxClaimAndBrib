@@ -64,7 +64,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         bytes32[] calldata merkleProof,
         bytes32 auraProp, bytes32 balProp,
         address tokenAddress
-    ) {
+    ) public onlyKeeper whenNotPaused {
         claim(index, totalAmount, merkleProof);
         bribAll(auraProp, balProp, tokenAddress);
     }
@@ -75,11 +75,11 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
    * @param totalAmount The total amount earned by the address
    * @param merkleProof Merkle Proofs
    */
-    function claim(
+    function claim (
         uint256 index,
         uint256 totalAmount,
         bytes32[] calldata merkleProof
-    ) external onlyKeeper {
+    ) public onlyKeeper whenNotPaused {
         gearboxTree.claim(index, address(this), totalAmount, merkleProof);
     }
 

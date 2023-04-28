@@ -23,14 +23,14 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     event BalBriberAddressChange(address oldAddress, address newAddress);
     event AuraBriberAddressChange(address oldAddress, address newAddress);
 
-    event MinWaitPeriodUpdated(uint256 oldMinWaitPeriod, uint256 newMinWaitPeriod);
     event ERC20Swept(address indexed token, address recipient, uint256 amount);
-    event claimFailed(bytes32[] proof);
-    event claimMade(bytes32 root, uint256 amount);
+    event ClaimMade();
     event WrongCaller(address sender, address keeperAddress);
     event PctBalBPSUpdated(uint256 oldBPS, uint256 newBPS);
+    event AmtPerRoundUpdated(uint256 oldAmount, uint256 amount);
     event Approve(address token);
     event Unapprove(address token);
+    event BribeAllEnabledChanged(bool old, bool changedTo);
 
 
     error OnlyKeeper();
@@ -39,19 +39,19 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
 
 
     address public keeperAddress;
-    uint256 public minWaitPeriodSeconds;
     IAirdropDistributor public gearboxTree;
     address public HHVault;
     IAuraBribe public auraHHBriber;
     IBalancerBribe public balHHBriber;
     bytes32 public last_root;
     uint256 public pct_bal_bps;
+    uint256 public amount_per_round;
+    bool public brib_all_enabled;
 
 
-    constructor(address _keeperAddress, uint256 _minWaitPeriodSeconds, IAuraBribe _auraBribe, IBalancerBribe _balBribe, address _HHvault, uint256 balbps)
+    constructor(address _keeperAddress, IAuraBribe _auraBribe, IBalancerBribe _balBribe, address _HHvault, uint256 balbps)
     ConfirmedOwner(msg.sender) {
         setKeeper(_keeperAddress);
-        setMinWaitPeriodSeconds(_minWaitPeriodSeconds);
         setAuraBriber(_auraBribe);
         setBalBriber(_balBribe);
         HHVault = _HHvault;
@@ -64,7 +64,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         bytes32[] calldata merkleProof,
         bytes32 auraProp, bytes32 balProp,
         address tokenAddress
-    ) public onlyKeeper whenNotPaused {
+    ) public onlyKeeper  {
         claim(index, totalAmount, merkleProof);
         bribAll(auraProp, balProp, tokenAddress);
     }
@@ -81,6 +81,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         bytes32[] calldata merkleProof
     ) public onlyKeeper whenNotPaused {
         gearboxTree.claim(index, address(this), totalAmount, merkleProof);
+        emit ClaimMade();
     }
 
     function _bribAura(bytes32 proposal, IERC20 token, uint256 amount) internal whenNotPaused {
@@ -141,20 +142,21 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
    * @param token The address to pay bribs in
    */
-    function bribAll(bytes32 auraProp, bytes32 balProp, address tokenAddress) public onlyOwner {
+    function bribAll(bytes32 auraProp, bytes32 balProp, address tokenAddress) public onlyKeeper {
+        require(brib_all_enabled, "brib_all_enabled must be set to true for the keeper to call this function");
         IERC20 token = IERC20(tokenAddress);
         uint256 amount = token.balanceOf(address(this));
         bribSplit(auraProp, balProp, tokenAddress, amount);
     }
 
-    /* @notice Bribs the specified amount to both markets based on the contract defined split
-   * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
-   * @param balProp The Hidden Hands proposal ID on the Bal market to brib
-   * @param token The address to pay bribs in
-   * @param amount How much in wei
-   */
+     /* @notice Bribs the specified amount to both markets based on the contract defined split
+    * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
+    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
+    * @param token The address to pay bribs in
+    * @param amount How much in wei
+    */
 
-    function bribSplit(bytes32 auraProp, bytes32 balProp, address tokenAddress, uint256 amount) public onlyOwner {
+    function bribSplit(bytes32 auraProp, bytes32 balProp, address tokenAddress, uint256 amount) private {
         IERC20 token = IERC20(tokenAddress);
         uint256 balAmount = amount * pct_bal_bps / 10000;
         uint256 auraAmount = amount - balAmount;
@@ -165,25 +167,38 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
 
 
 
-    /* @notice Bribs the specified amount of the given token to the given proposal split between aura and bal markets.
-   * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
-   * @param balProp The Hidden Hands proposal ID on the Bal market to brib
-   * @param token The address to pay bribs in
-   * @param balAmount How much in wei
-   * @param auraAmount How much in wei
-   */
-    function bribBoth(bytes32 auraProp, uint256 auraAmount, bytes32 balProp, uint256 balAmount, address tokenAddress) public onlyKeeper {
+     /* @notice Bribs the specified amount of the given token to the given proposal split between aura and bal markets.
+    * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
+    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
+    * @param token The address to pay bribs in
+    * @param balAmount How much in wei
+    * @param auraAmount How much in wei
+    */
+    function bribBothAmounts(bytes32 auraProp, uint256 auraAmount, bytes32 balProp, uint256 balAmount, address tokenAddress) public onlyOwner  {
         IERC20 token = IERC20(tokenAddress);
         require(auraAmount + balAmount >= token.balanceOf(address(this)), "Amount more than balance");
         _bribBal(balProp, token, balAmount);
         _bribAura(auraProp, token, auraAmount);
     }
+      /* @notice Bribs the both tokens given the specified split and amount.
+    * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
+    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
+    * @param token The address to pay bribs in
+    * @param balAmount How much in wei
+    * @param auraAmount How much in wei
+    */
+    function bribBoth(bytes32 auraProp, uint256 auraAmount, bytes32 balProp, uint256 balAmount, address tokenAddress) public onlyOwner {
+        IERC20 token = IERC20(tokenAddress);
+        require(amount_per_round >= token.balanceOf(address(this)), "amount_per_round more than balance");
+        require(amount_per_round > 0, "amount_per_round is 0, set it or use another function");
+        bribSplit(auraProp, balProp, tokenAddress, pct_bal_bps);
+    }
 
 
-    /* @notice Withdraws gas from the contract (contract doesn't use gas(
-   * @param amount The amount of eth (in wei) to withdraw
-   * @param recipient The address to pay
-   */
+     /* @notice Withdraws gas from the contract (contract doesn't use gas(
+    * @param amount The amount of eth (in wei) to withdraw
+    * @param recipient The address to pay
+    */
     function withdrawGasToken(uint256 amount, address payable recipient) public onlyOwner {
         if (recipient == address(0)) {
             revert ZeroAddress();
@@ -230,6 +245,13 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         balHHBriber = balBriberAddress;
     }
 
+    /**
+    * @notice If set to true, the keeper will be able to call the bribAll function which bribs the entire contract balance.
+   */
+    function setBribAllEnabled(bool enabled)  public onlyOwner {
+        emit BribeAllEnabledChanged(brib_all_enabled, enabled);
+        brib_all_enabled = enabled;
+    }
 
     function maxApproveToken(address tokenAddress) public onlyOwner whenNotPaused {
         IERC20 token = IERC20(tokenAddress);
@@ -243,13 +265,6 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         SafeERC20.safeApprove(token, HHVault, 0);
         emit Unapprove(address(token));
     }
-    /**
-     * @notice Sets the minimum wait period (in seconds) for addresses between injections
-   */
-    function setMinWaitPeriodSeconds(uint256 period) public onlyOwner {
-        emit MinWaitPeriodUpdated(minWaitPeriodSeconds, period);
-        minWaitPeriodSeconds = period;
-    }
 
     /**
      * @notice Sets the bps percent that should go to balancer
@@ -258,6 +273,13 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         require(bps <= 10000, "Can't have more than 100% brib split ser.");
         emit PctBalBPSUpdated(pct_bal_bps, bps);
         pct_bal_bps = bps;
+    }
+    /**
+     * @notice Sets the amount per round called when the keeper calls bribBoth.  If set to 0 bribBoth is disabled.
+   */
+    function setAmountPerRound(uint256 amount) public onlyOwner {
+        emit AmtPerRoundUpdated(amount_per_round, amount);
+        amount_per_round = amount;
     }
     /**
      * @notice Pauses the contract, which prevents executing performUpkeep

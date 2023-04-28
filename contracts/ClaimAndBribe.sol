@@ -32,10 +32,9 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     event Unapprove(address token);
     event BribeAllEnabledChanged(bool old, bool changedTo);
 
-
     error OnlyKeeper();
     error ZeroAddress();
-    error OnlyKeeperRegistry(address sender);
+
 
 
     address public keeperAddress;
@@ -49,6 +48,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     bool public brib_all_enabled;
 
 
+
     constructor(address _keeperAddress, IAuraBribe _auraBribe, IBalancerBribe _balBribe, address _HHvault, uint256 balbps)
     ConfirmedOwner(msg.sender) {
         setKeeper(_keeperAddress);
@@ -58,17 +58,32 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         setPctBalBPS(balbps);
     }
 
-    function claimAndBribeAll(
+    function claimAndBribeAll (
         uint256 index,
         uint256 totalAmount,
         bytes32[] calldata merkleProof,
         bytes32 auraProp, bytes32 balProp,
         address tokenAddress
-    ) public onlyKeeper  {
+    ) external onlyKeeper  {
         claim(index, totalAmount, merkleProof);
         bribAll(auraProp, balProp, tokenAddress);
     }
 
+   /* @notice Bribs entire contract balance of the gvien token to both markets based on the contract defined split
+   * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
+   * @param balProp The Hidden Hands proposal ID on the Bal market to brib
+   * @param token The address to pay bribs in
+   */
+    function bribAll(
+        bytes32 auraProp,
+        bytes32 balProp,
+        address tokenAddress
+    ) public onlyKeeper {
+        require(brib_all_enabled, "brib_all_enabled must be set to true for the keeper to call this function");
+        IERC20 token = IERC20(tokenAddress);
+        uint256 amount = token.balanceOf(address(this));
+        bribSplit(auraProp, balProp, tokenAddress, amount);
+    }
 
     /* @notice Claims coinz from the gear tree the values here must be pulled from offchain
    * @param index The current tree index
@@ -84,70 +99,75 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         emit ClaimMade();
     }
 
-    function _bribAura(bytes32 proposal, IERC20 token, uint256 amount) internal whenNotPaused {
-        require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
-        auraHHBriber.depositBribeERC20(proposal, address(token), amount);
-    }
 
-    function _bribBal(bytes32 proposal, IERC20 token, uint256 amount) internal whenNotPaused {
-        require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
-        balHHBriber.depositBribeERC20(proposal, address(token), amount);
-    }
 
     /* @notice Bribs the specified amount on the bal market
    * @param proposal The Hidden Hands proposal ID to brib
    * @param token The address to pay bribs in
    * @param amount How much in wei
    */
-    function bribBal(bytes32 proposal, address tokenAddress, uint256 amount) public onlyOwner {
+    function bribBal(bytes32 proposal,
+        address tokenAddress,
+        uint256 amount
+    ) public onlyOwner {
         IERC20 token = IERC20(tokenAddress);
         _bribBal(proposal, token, amount);
     }
 
-
-    /* @notice Bribs the entire current contract balance of the given token on the bal market
-   * @param proposal The Hidden Hands proposal ID to brib
-   * @param token The address to pay bribs in
-   */
-    function bribBal(bytes32 proposal, address tokenAddress) public onlyOwner {
-        IERC20 token = IERC20(tokenAddress);
-        uint256 amount = token.balanceOf(address(this));
-        _bribBal(proposal, token, amount);
-    }
 
     /* @notice Bribs the specified amount on the aura market
    * @param proposal The Hidden Hands proposal ID to brib
    * @param token The address to pay bribs in
    * @param amount How much in wei
    */
-    function bribAura(bytes32 proposal, address tokenAddress, uint256 amount) public onlyOwner {
+    function bribAura(bytes32 proposal,
+        address tokenAddress,
+        uint256 amount
+    ) public onlyOwner {
         IERC20 token = IERC20(tokenAddress);
         _bribAura(proposal, token, amount);
     }
 
-
-    /* @notice Bribs the entire current contract auraance of the given token on the aura market
-   * @param proposal The Hidden Hands proposal ID to brib
-   * @param token The address to pay bribs in
-   */
-    function bribAura(bytes32 proposal, address tokenAddress) public onlyOwner {
+     /* @notice Bribs the specified amount of the given token to the given proposal split between aura and bal markets.
+    * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
+    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
+    * @param token The address to pay bribs in
+    * @param balAmount How much in wei
+    * @param auraAmount How much in wei
+    */
+    function bribBothAmounts(bytes32 auraProp,
+        uint256 auraAmount,
+        bytes32 balProp,
+        uint256 balAmount,
+        address tokenAddress
+    ) public onlyOwner  {
         IERC20 token = IERC20(tokenAddress);
-        uint256 amount = token.balanceOf(address(this));
-        _bribAura(proposal, token, amount);
+        require(auraAmount + balAmount >= token.balanceOf(address(this)), "Amount more than balance");
+        _bribBal(balProp, token, balAmount);
+        _bribAura(auraProp, token, auraAmount);
     }
 
 
-    /* @notice Bribs entire contract balance of the gvien token to both markets based on the contract defined split
-   * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
-   * @param balProp The Hidden Hands proposal ID on the Bal market to brib
-   * @param token The address to pay bribs in
-   */
-    function bribAll(bytes32 auraProp, bytes32 balProp, address tokenAddress) public onlyKeeper {
-        require(brib_all_enabled, "brib_all_enabled must be set to true for the keeper to call this function");
+      /* @notice Bribs the both tokens given the specified split and amount.
+    * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
+    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
+    * @param token The address to pay bribs in
+    * @param balAmount How much in wei
+    * @param auraAmount How much in wei
+    */
+    function bribBoth(bytes32 auraProp,
+        uint256 auraAmount,
+        bytes32 balProp,
+        uint256 balAmount,
+        address tokenAddress
+    ) public onlyOwner {
         IERC20 token = IERC20(tokenAddress);
-        uint256 amount = token.balanceOf(address(this));
-        bribSplit(auraProp, balProp, tokenAddress, amount);
+        require(amount_per_round >= token.balanceOf(address(this)), "amount_per_round more than balance");
+        require(amount_per_round > 0, "amount_per_round is 0, set it or use another function");
+        bribSplit(auraProp, balProp, tokenAddress, pct_bal_bps);
     }
+
+
 
      /* @notice Bribs the specified amount to both markets based on the contract defined split
     * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
@@ -156,7 +176,11 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     * @param amount How much in wei
     */
 
-    function bribSplit(bytes32 auraProp, bytes32 balProp, address tokenAddress, uint256 amount) private {
+    function bribSplit(bytes32 auraProp,
+        bytes32 balProp,
+        address tokenAddress,
+        uint256 amount
+    ) private {
         IERC20 token = IERC20(tokenAddress);
         uint256 balAmount = amount * pct_bal_bps / 10000;
         uint256 auraAmount = amount - balAmount;
@@ -166,34 +190,21 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     }
 
 
-
-     /* @notice Bribs the specified amount of the given token to the given proposal split between aura and bal markets.
-    * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
-    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
-    * @param token The address to pay bribs in
-    * @param balAmount How much in wei
-    * @param auraAmount How much in wei
-    */
-    function bribBothAmounts(bytes32 auraProp, uint256 auraAmount, bytes32 balProp, uint256 balAmount, address tokenAddress) public onlyOwner  {
-        IERC20 token = IERC20(tokenAddress);
-        require(auraAmount + balAmount >= token.balanceOf(address(this)), "Amount more than balance");
-        _bribBal(balProp, token, balAmount);
-        _bribAura(auraProp, token, auraAmount);
-    }
-      /* @notice Bribs the both tokens given the specified split and amount.
-    * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
-    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
-    * @param token The address to pay bribs in
-    * @param balAmount How much in wei
-    * @param auraAmount How much in wei
-    */
-    function bribBoth(bytes32 auraProp, uint256 auraAmount, bytes32 balProp, uint256 balAmount, address tokenAddress) public onlyOwner {
-        IERC20 token = IERC20(tokenAddress);
-        require(amount_per_round >= token.balanceOf(address(this)), "amount_per_round more than balance");
-        require(amount_per_round > 0, "amount_per_round is 0, set it or use another function");
-        bribSplit(auraProp, balProp, tokenAddress, pct_bal_bps);
+    function _bribAura(bytes32 proposal,
+        IERC20 token,
+        uint256 amount
+    ) private whenNotPaused {
+        require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
+        auraHHBriber.depositBribeERC20(proposal, address(token), amount);
     }
 
+    function _bribBal(bytes32 proposal,
+        IERC20 token,
+        uint256 amount
+    ) private whenNotPaused {
+        require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
+        balHHBriber.depositBribeERC20(proposal, address(token), amount);
+    }
 
      /* @notice Withdraws gas from the contract (contract doesn't use gas(
     * @param amount The amount of eth (in wei) to withdraw

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.6;
+pragma solidity 0.8.18;
 
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -58,6 +58,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         setPctBalBPS(balbps);
     }
 
+
     function claimAndBribeAll (
         uint256 index,
         uint256 totalAmount,
@@ -81,8 +82,28 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     ) public onlyKeeper {
         require(brib_all_enabled, "brib_all_enabled must be set to true for the keeper to call this function");
         IERC20 token = IERC20(tokenAddress);
+        require(token.balanceOf(address(this)) > 0, "No balance of the specified token in the contract to brib ser");
         uint256 amount = token.balanceOf(address(this));
         bribSplit(auraProp, balProp, tokenAddress, amount);
+    }
+
+    /* @notice Bribs the both tokens given the specified split and amount.
+    * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
+    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
+    * @param token The address to pay bribs in
+    * @param balAmount How much in wei
+    * @param auraAmount How much in wei
+    */
+    function bribBoth(bytes32 auraProp,
+        uint256 auraAmount,
+        bytes32 balProp,
+        uint256 balAmount,
+        address tokenAddress
+    ) external onlyKeeper whenNotPaused {
+        IERC20 token = IERC20(tokenAddress);
+        require(amount_per_round >= token.balanceOf(address(this)), "amount_per_round more than balance");
+        require(amount_per_round > 0, "amount_per_round is 0, set it or use another function");
+        bribSplit(auraProp, balProp, tokenAddress, pct_bal_bps);
     }
 
     /* @notice Claims coinz from the gear tree the values here must be pulled from offchain
@@ -94,7 +115,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         uint256 index,
         uint256 totalAmount,
         bytes32[] calldata merkleProof
-    ) public onlyKeeper whenNotPaused {
+    ) public  onlyKeeper whenNotPaused {
         gearboxTree.claim(index, address(this), totalAmount, merkleProof);
         emit ClaimMade();
     }
@@ -109,9 +130,9 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     function bribBal(bytes32 proposal,
         address tokenAddress,
         uint256 amount
-    ) public onlyOwner {
+    ) public onlyOwner  {
         IERC20 token = IERC20(tokenAddress);
-        _bribBal(proposal, token, amount);
+        _bribBal(proposal, token,  amount);
     }
 
 
@@ -125,7 +146,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         uint256 amount
     ) public onlyOwner {
         IERC20 token = IERC20(tokenAddress);
-        _bribAura(proposal, token, amount);
+        _bribAura(proposal, token,  amount);
     }
 
      /* @notice Bribs the specified amount of the given token to the given proposal split between aura and bal markets.
@@ -148,27 +169,6 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     }
 
 
-      /* @notice Bribs the both tokens given the specified split and amount.
-    * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
-    * @param balProp The Hidden Hands proposal ID on the Bal market to brib
-    * @param token The address to pay bribs in
-    * @param balAmount How much in wei
-    * @param auraAmount How much in wei
-    */
-    function bribBoth(bytes32 auraProp,
-        uint256 auraAmount,
-        bytes32 balProp,
-        uint256 balAmount,
-        address tokenAddress
-    ) public onlyOwner {
-        IERC20 token = IERC20(tokenAddress);
-        require(amount_per_round >= token.balanceOf(address(this)), "amount_per_round more than balance");
-        require(amount_per_round > 0, "amount_per_round is 0, set it or use another function");
-        bribSplit(auraProp, balProp, tokenAddress, pct_bal_bps);
-    }
-
-
-
      /* @notice Bribs the specified amount to both markets based on the contract defined split
     * @param auraProp The Hidden Hands proposal ID on the Aura market to brib
     * @param balProp The Hidden Hands proposal ID on the Bal market to brib
@@ -180,11 +180,12 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         bytes32 balProp,
         address tokenAddress,
         uint256 amount
-    ) private {
+    ) private  {
         IERC20 token = IERC20(tokenAddress);
         uint256 balAmount = amount * pct_bal_bps / 10000;
         uint256 auraAmount = amount - balAmount;
         require(auraAmount + balAmount >= token.balanceOf(address(this)), "Amount more than balance");
+        _approveToken(tokenAddress, amount);
         _bribAura(auraProp, token, auraAmount);
         _bribBal(balProp, token, balAmount);
     }
@@ -193,7 +194,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     function _bribAura(bytes32 proposal,
         IERC20 token,
         uint256 amount
-    ) private whenNotPaused {
+    ) private  {
         require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
         auraHHBriber.depositBribeERC20(proposal, address(token), amount);
     }
@@ -201,7 +202,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
     function _bribBal(bytes32 proposal,
         IERC20 token,
         uint256 amount
-    ) private whenNotPaused {
+    ) private  {
         require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
         balHHBriber.depositBribeERC20(proposal, address(token), amount);
     }
@@ -223,7 +224,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
    * @param token The ERC-20 token which needs to be swept
    * @param recipient The address to pay
    */
-    function sweep(address token, address recipient) public onlyOwner {
+    function sweep(address token, address recipient) public onlyOwner  {
         uint256 balance = IERC20(token).balanceOf(address(this));
         emit ERC20Swept(token, recipient, balance);
         SafeERC20.safeTransfer(IERC20(token), recipient, balance);
@@ -264,9 +265,15 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         brib_all_enabled = enabled;
     }
 
-    function maxApproveToken(address tokenAddress) public onlyOwner whenNotPaused {
+
+    function approveToken(address tokenAddress, uint256 amount) public onlyOwner whenNotPaused {
+        _approveToken(tokenAddress, amount);
+    }
+
+
+    function _approveToken(address tokenAddress, uint256 amount) private  whenNotPaused {
         IERC20 token = IERC20(tokenAddress);
-        SafeERC20.safeApprove(token, HHVault, type(uint256).max);
+        SafeERC20.safeApprove(token, HHVault, amount);
         emit Approve(address(token));
     }
 

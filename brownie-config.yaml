@@ -2,7 +2,6 @@ autofetch_sources: True
 
 networks:
   default: mainnet-fork
-
 dotenv: .env
 
 dependencies:
@@ -10,7 +9,14 @@ dependencies:
     - smartcontractkit/chainlink@1.10.0
 
 compiler:
+    evm_version: "paris"
     solc:
         remappings:
           - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.5.0"
           - "@chainlink=smartcontractkit/chainlink@1.10.0"
+        optimizer:
+          enabled: true
+          runs: 200
+          details:
+            cse: true
+            yul: true

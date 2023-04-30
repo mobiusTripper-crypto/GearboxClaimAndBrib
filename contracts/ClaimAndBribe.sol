@@ -188,6 +188,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         _approveToken(tokenAddress, amount);
         _bribAura(auraProp, token, auraAmount);
         _bribBal(balProp, token, balAmount);
+        }
     }
 
 
@@ -195,6 +196,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         IERC20 token,
         uint256 amount
     ) private  {
+        if(amount = 0){return;}
         require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
         auraHHBriber.depositBribeERC20(proposal, address(token), amount);
     }
@@ -203,6 +205,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         IERC20 token,
         uint256 amount
     ) private  {
+        if(amount = 0){return;}
         require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
         balHHBriber.depositBribeERC20(proposal, address(token), amount);
     }

@@ -44,3 +44,16 @@ def test_ownable(helper, admin, deployer, token, tree, upkeep_caller):
     with brownie.reverts():
         helper.sweep(token, admin, {"from": deployer})
     helper.sweep(token, admin, {"from": admin})
+
+def test_double_brib_all(helper, upkeep_caller, tree, token, admin):
+    chain.sleep(helper.minWaitPeriodSeconds() +1)
+    chain.mine()
+    token.transfer(helper, 500*10**token.decimals(), {"from": tree})
+    helper.setBribAllEnabled(True, {"from": admin})
+    tx = helper.bribAll(AURA_PROP, BAL_PROP, token.address, {"from": upkeep_caller})
+    token.transfer(helper, 500*10**token.decimals(), {"from": tree})
+    with brownie.reverts():
+        tx = helper.bribAll(AURA_PROP, BAL_PROP, token.address, {"from": upkeep_caller})
+    chain.sleep(helper.minWaitPeriodSeconds() +1)
+    chain.mine()
+    tx = helper.bribAll(AURA_PROP, BAL_PROP, token.address, {"from": upkeep_caller})

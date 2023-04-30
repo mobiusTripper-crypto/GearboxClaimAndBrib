@@ -70,7 +70,7 @@ def deploy(deployer, admin, upkeep_caller, token, tree):
     """
     Deploys, vault and test strategy, mock token and wires them up.
     """
-    helper = GearboxClaimAndBrib.deploy(upkeep_caller, HH_AURA, HH_BAL, HH_VAULT, 50, {"from": deployer})
+    helper = GearboxClaimAndBrib.deploy(upkeep_caller, HH_AURA, HH_BAL, HH_VAULT, 50, 300, {"from": deployer})
     helper.transferOwnership(admin, {"from": deployer})
     helper.acceptOwnership({"from": admin})
     return DotMap(

@@ -94,10 +94,9 @@ contract GearboxClaimAndBrib is ConfirmedOwner, Pausable {
     * @param balAmount How much in wei
     * @param auraAmount How much in wei
     */
-    function bribBoth(bytes32 auraProp,
-        uint256 auraAmount,
+remn    function bribBoth(
+        bytes32 auraProp,
         bytes32 balProp,
-        uint256 balAmount,
         address tokenAddress
     ) external onlyKeeper whenNotPaused {
         IERC20 token = IERC20(tokenAddress);

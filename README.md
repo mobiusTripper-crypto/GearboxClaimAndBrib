@@ -1,41 +1,10 @@
-# periodicRewardsInjector
+# GearboxClaimAndBrib
 
-This contract is meant to be called by chainlink uplink.  It is used in cases where DAOs wish to add extra yields to their Balancer Gaugue emisisons and want more granular control than using the gauge system would allow.
+This contract is meant to be called by a web3 function in order to pay bribs.  It uses it's internal balance and settings around an amount  per round and a market split to decide how much to brib and where.
+
+It is ownable, giving the owner the ability to sweep and do more brib ops.
+
+The contract can be used to brib the entire balance each round and/or a specified amount.  On deployment all keeper bribs are disabled.  Set the amount per brib to allow bribs of fixed amounts each call, and set the enableBribAll to enable that.
 
 
-The tests are based on LDO on Arbitrum where a multisig is curerntly doing these operations.
-
-to run tests
-
-```bash
-pip3 install brownie
-brownie test --network arbitrum-main-fork
-```
-
-If you do not have this network and the following lines to the end of your `~/.brownie/netowrk_config-yaml`
-```yaml
-  - name: Ganache-CLI (Arbitrum-Mainnet Fork)
-    id: arbitrum-main-fork
-    cmd: ganache-cli
-    host: http://127.0.0.1
-    timeout: 120
-    cmd_settings:
-      port: 8545
-      gas_limit: 20000000
-      accounts: 10
-      evm_version: istanbul
-      mnemonic: brownie
-      fork: arbitrum-main
-
-```
-
-your .env file will require:
-```
-WEB3_INFURA_PROJECT_ID=
-or other arbitrum RPC
-```
-LDO tokens are sent into the contract and are meant to be stored there.
-
-A list is setup with gauges, amounts, and numbers of epochs.
-
-The ChildChainStreamer has its own sense of epochs, this contract waits until the stream says it is ready, and then asks chainlink to trigger it and send in the alotted number of tokens.
+TODO: Still need to probs add some min wait period or something as right now brib amount could be called multiple times in a row.

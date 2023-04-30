@@ -65,7 +65,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         bytes32[] calldata merkleProof,
         bytes32 auraProp, bytes32 balProp,
         address tokenAddress
-    ) external onlyKeeper  {
+    ) external onlyKeeper whenNotPaused {
         claim(index, totalAmount, merkleProof);
         bribAll(auraProp, balProp, tokenAddress);
     }
@@ -79,7 +79,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         bytes32 auraProp,
         bytes32 balProp,
         address tokenAddress
-    ) public onlyKeeper {
+    ) public onlyKeeper whenNotPaused {
         require(brib_all_enabled, "brib_all_enabled must be set to true for the keeper to call this function");
         IERC20 token = IERC20(tokenAddress);
         require(token.balanceOf(address(this)) > 0, "No balance of the specified token in the contract to brib ser");

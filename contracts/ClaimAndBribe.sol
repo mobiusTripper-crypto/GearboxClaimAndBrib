@@ -16,7 +16,7 @@ import "interfaces/hiddenhand/IBribers.sol";
  * @notice This contract is meant to be called by a web3 function.   It claims rewards from a Gearbox style merkle tree, and then pays out bribs on hidden hands
  * @notice The contract includes the ability to withdraw eth and sweep all ERC20 tokens including the managed token to any address by the owner and admin functionality to change the bribe destination.
  */
-contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
+contract GearboxClaimAndBrib is ConfirmedOwner, Pausable {
     event gasTokenWithdrawn(uint256 amountWithdrawn, address recipient);
     event KeeperAddressChange(address oldAddress, address newAddress);
     event GearboxTreeAddressChange(address oldAddress, address newAddress);
@@ -188,7 +188,6 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         _approveToken(tokenAddress, amount);
         _bribAura(auraProp, token, auraAmount);
         _bribBal(balProp, token, balAmount);
-        }
     }
 
 
@@ -196,7 +195,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         IERC20 token,
         uint256 amount
     ) private  {
-        if(amount = 0){return;}
+        if(amount == 0){return;}
         require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
         auraHHBriber.depositBribeERC20(proposal, address(token), amount);
     }
@@ -205,7 +204,7 @@ contract GearboxClaimAndBribe is ConfirmedOwner, Pausable {
         IERC20 token,
         uint256 amount
     ) private  {
-        if(amount = 0){return;}
+        if(amount == 0){return;}
         require(token.balanceOf(address(this)) >= amount, "Contract does not have sufficient balance for the specified brib.");
         balHHBriber.depositBribeERC20(proposal, address(token), amount);
     }

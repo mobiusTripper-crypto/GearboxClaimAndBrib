@@ -10,10 +10,23 @@ AURA_PROP = "0xaf115a58c45e37d92502eef6fbc55fa5098602a3c96e2507898eedc1b361acf5"
 BAL_PROP = "0x4735553b91be8926bebb90d63080bc66942e8b953232f2257272e60476f1d7dd"
 RUN_BLOCK = 17139060
 def test_bribAll(token, deployer, upkeep_caller, helper, admin, tree):
+    chain.sleep(helper.minWaitPeriodSeconds() +1)
+    chain.mine()
     token.transfer(helper, 1000*10**token.decimals(), {"from": tree})
     helper.setBribAllEnabled(True, {"from": admin})
     tx = helper.bribAll(AURA_PROP, BAL_PROP, token.address, {"from": upkeep_caller})
     tx.events
+
+
+def test_bribBoth(token, deployer, upkeep_caller, helper, admin, tree):
+    chain.sleep(helper.minWaitPeriodSeconds() +1)
+    chain.mine()
+    token.transfer(helper, 1000*10**token.decimals(), {"from": tree})
+    helper.setAmountPerRound(500*10**token.decimals(), {"from": admin})
+    tx = helper.bribBoth(AURA_PROP, BAL_PROP, token.address, {"from": upkeep_caller})
+    assert token.balanceOf(helper) == 500*10**token.decimals(), "Unexpected leftover balance in helper"
+    tx.events
+
 
 
 def test_pause_and_unpause(helper, admin, upkeep_caller, token, tree):

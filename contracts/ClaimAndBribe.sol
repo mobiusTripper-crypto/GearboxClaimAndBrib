@@ -105,7 +105,7 @@ contract GearboxClaimAndBrib is ConfirmedOwner, Pausable {
         address tokenAddress
     ) external onlyKeeper whenNotPaused {
         IERC20 token = IERC20(tokenAddress);
-        require(amount_per_round >= token.balanceOf(address(this)), "amount_per_round more than balance");
+        require(amount_per_round <= token.balanceOf(address(this)), "amount_per_round more than balance");
         require(amount_per_round > 0, "amount_per_round is 0, set it or use another function");
         require(block.timestamp > lastRun  + minWaitPeriodSeconds, "Running again too soon");
         bribSplit(auraProp, balProp, tokenAddress, amount_per_round);
@@ -124,9 +124,9 @@ contract GearboxClaimAndBrib is ConfirmedOwner, Pausable {
         uint256 amount
     ) private  {
         IERC20 token = IERC20(tokenAddress);
-        uint256 balAmount = amount * pct_bal_bps / 10000;
+        uint256 balAmount = (amount * pct_bal_bps) / 10000;
         uint256 auraAmount = amount - balAmount;
-        require(auraAmount + balAmount >= token.balanceOf(address(this)), "Amount more than balance");
+        require(auraAmount + balAmount <= token.balanceOf(address(this)), "Amount more than balance");
         _approveToken(tokenAddress, amount);
         _bribAura(auraProp, token, auraAmount);
         _bribBal(balProp, token, balAmount);

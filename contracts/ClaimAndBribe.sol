@@ -94,7 +94,7 @@ contract GearboxClaimAndBrib is ConfirmedOwner, Pausable {
     * @param balAmount How much in wei
     * @param auraAmount How much in wei
     */
-remn    function bribBoth(
+    function bribBoth(
         bytes32 auraProp,
         bytes32 balProp,
         address tokenAddress

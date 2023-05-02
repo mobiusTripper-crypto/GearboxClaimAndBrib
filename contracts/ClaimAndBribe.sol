@@ -330,7 +330,7 @@ contract GearboxClaimAndBrib is ConfirmedOwner, Pausable {
     }
 
     modifier onlyKeeper()  {
-        if (msg.sender != keeperRegistry && msg.sender != owner) {
+        if (msg.sender != keeperRegistry && msg.sender != owner()) {
             emit WrongCaller(msg.sender, keeperAddress);
             revert OnlyKeeper();
         }

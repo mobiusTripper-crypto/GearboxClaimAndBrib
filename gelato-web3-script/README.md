@@ -34,7 +34,6 @@ PRIVATE_KEY="" # optional: only needed if you wish to create a task from the CLI
 - Use `npx w3f test FILENAME` command to test your function
 
 - Options:
-
   - `--show-logs` Show internal Web3 Function logs
   - `--debug` Show Runtime debug messages
   - `--chain-id=[number]` Specify the chainId to be used for your Web3 Function (default: `5` for Goerli)

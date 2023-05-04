@@ -9,7 +9,6 @@ import getGearboxData from "./getGearboxData";
 import getAuraProposalHash from "./getAuraProposalHash";
 
 import ClaimAndBribeABI from "../../abis/ClaimAndBribe.json";
-import { MINIMUM_REWARD } from "./constants";
 import getBalancerProposalHash from "./getBalancerProposalHash";
 
 Web3Function.onRun(async (context: Web3FunctionContext) => {
@@ -21,6 +20,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
       tokenAddress,
       gaugeToBribeAddress,
       claimAndBribeContractAddress,
+      minimumReward,
     } = verifyUserArgs(userArgs);
 
     const claimAndBribe = new Contract(
@@ -50,7 +50,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
         provider
       );
 
-    if (BigNumber.from(rewardAmount).lt(MINIMUM_REWARD)) {
+    if (BigNumber.from(rewardAmount).lt(minimumReward)) {
       return {
         canExec: false,
         message: `Reward amount ${ethers.utils.formatEther(

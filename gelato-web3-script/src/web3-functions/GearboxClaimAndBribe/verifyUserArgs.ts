@@ -32,6 +32,11 @@ export default function verifyUserArgs(
     throw "userArgs parameter claimAndBribeContractAddress is not a valid address";
   }
 
+  const minimumReward = userArgs.minimumReward as string;
+  if (!ethers.utils.isAddress(minimumReward)) {
+    throw "userArgs parameter minimumReward is not a valid address";
+  }
+
   return {
     multisigClaimAddress,
     tokenAddress,

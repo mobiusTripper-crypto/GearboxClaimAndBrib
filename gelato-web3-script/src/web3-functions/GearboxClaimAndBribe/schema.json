@@ -7,6 +7,7 @@
     "multisigClaimAddress": "string",
     "tokenAddress": "string",
     "gaugeToBribeAddress": "string",
-    "claimAndBribeContractAddress": "string"
+    "claimAndBribeContractAddress": "string",
+    "minimumReward": "string"
   }
 }

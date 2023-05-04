@@ -23,6 +23,26 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
       claimAndBribeContractAddress,
     } = verifyUserArgs(userArgs);
 
+    const claimAndBribe = new Contract(
+      claimAndBribeContractAddress,
+      ClaimAndBribeABI,
+      provider
+    );
+    const lastUpdated = parseInt(await claimAndBribe.lastRun());
+    const minWaitPeriodSeconds = parseInt(
+      await claimAndBribe.minWaitPeriodSeconds()
+    );
+
+    const nextUpdateTime = lastUpdated + minWaitPeriodSeconds;
+    const timestamp = gelatoArgs.blockTime;
+
+    if (timestamp < nextUpdateTime) {
+      return {
+        canExec: false,
+        message: `Not time to update, still within waiting period.`,
+      };
+    }
+
     const { gearboxMerkleProof, rewardAmount, gearboxIndex } =
       await getGearboxData(
         multisigClaimAddress,
@@ -35,7 +55,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
         canExec: false,
         message: `Reward amount ${ethers.utils.formatEther(
           rewardAmount
-        )} is less than minimum amount`,
+        )} is less than minimum amount.`,
       };
     }
 
@@ -43,12 +63,6 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
       gaugeToBribeAddress
     );
     const auraProposalHash = await getAuraProposalHash(gaugeToBribeAddress);
-
-    const claimAndBribe = new Contract(
-      claimAndBribeContractAddress,
-      ClaimAndBribeABI,
-      provider
-    );
 
     console.log(`claimAndBrib function
     index=${gearboxIndex}

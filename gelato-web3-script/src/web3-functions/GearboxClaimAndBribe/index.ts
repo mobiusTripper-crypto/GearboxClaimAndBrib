@@ -9,18 +9,26 @@ import getGearboxData from "./getGearboxData";
 import getAuraProposalHash from "./getAuraProposalHash";
 
 import ClaimAndBribeABI from "../../abis/ClaimAndBribe.json";
-import { CLAIM_AND_BRIBE_CONTRACT, MINIMUM_REWARD } from "./constants";
+import { MINIMUM_REWARD } from "./constants";
 import getBalancerProposalHash from "./getBalancerProposalHash";
 
 Web3Function.onRun(async (context: Web3FunctionContext) => {
   const { userArgs, gelatoArgs, provider } = context;
 
   try {
-    const { multisigClaimAddress, claimTokenAddress, gaugeToBribeAddress } =
-      verifyUserArgs(userArgs);
+    const {
+      multisigClaimAddress,
+      tokenAddress,
+      gaugeToBribeAddress,
+      claimAndBribeContractAddress,
+    } = verifyUserArgs(userArgs);
 
     const { gearboxMerkleProof, rewardAmount, gearboxIndex } =
-      await getGearboxData(multisigClaimAddress, provider);
+      await getGearboxData(
+        multisigClaimAddress,
+        claimAndBribeContractAddress,
+        provider
+      );
 
     if (BigNumber.from(rewardAmount).lt(MINIMUM_REWARD)) {
       return {
@@ -31,17 +39,13 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
       };
     }
 
-    // const balancerProposalHash = ethers.utils.solidityKeccak256(
-    //   ["address"],
-    //   [gaugeToBribeAddress]
-    // );
     const balancerProposalHash = await getBalancerProposalHash(
       gaugeToBribeAddress
     );
     const auraProposalHash = await getAuraProposalHash(gaugeToBribeAddress);
 
     const claimAndBribe = new Contract(
-      CLAIM_AND_BRIBE_CONTRACT,
+      claimAndBribeContractAddress,
       ClaimAndBribeABI,
       provider
     );
@@ -52,7 +56,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
     merkleProof=${gearboxMerkleProof}
     auraProp=${auraProposalHash}
     balProp=${balancerProposalHash}
-    tokenAddress=${claimTokenAddress}`);
+    tokenAddress=${tokenAddress}`);
 
     return {
       canExec: true,
@@ -62,7 +66,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
         gearboxMerkleProof,
         auraProposalHash,
         balancerProposalHash,
-        claimTokenAddress,
+        tokenAddress,
       ]),
     };
   } catch (error) {

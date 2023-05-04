@@ -5,7 +5,8 @@
   "timeout": 30,
   "userArgs": {
     "multisigClaimAddress": "string",
-    "claimTokenAddress": "string",
-    "gaugeToBribeAddress": "string"
+    "tokenAddress": "string",
+    "gaugeToBribeAddress": "string",
+    "claimAndBribeContractAddress": "string"
   }
 }

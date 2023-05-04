@@ -1,22 +1,37 @@
 import { Contract, ethers } from "ethers";
 import ky from "ky";
-import GearAirdropDistributorABI from "../../abis/GearAirdropDistributor.json";
-import { GEARBOX_TREE_ADDRESS, GEARBOX_MERKLE_BASE_URL } from "./constants";
+import ClaimAndBribeABI from "../../abis/ClaimAndBribe.json";
+import { GEARBOX_MERKLE_BASE_URL } from "./constants";
+
+const GearAirdropDistributorABI = [
+  "function merkleRoot() external view returns(bytes32)",
+];
 
 export default async function getGearboxData(
   multisigClaimAddress: string,
+  claimAndBribeContractAddress: string,
   provider: ethers.providers.StaticJsonRpcProvider
 ): Promise<{
   gearboxIndex: number;
   gearboxMerkleProof: string;
   rewardAmount: string;
 }> {
-  const contract = new Contract(
-    GEARBOX_TREE_ADDRESS,
-    GearAirdropDistributorABI,
-    provider
-  );
   try {
+    const claimAndBribeContract = new Contract(
+      claimAndBribeContractAddress,
+      ClaimAndBribeABI,
+      provider
+    );
+
+    const gearboxTreeAddress =
+      (await claimAndBribeContract.gearboxTree()) as string;
+
+    const contract = new Contract(
+      gearboxTreeAddress,
+      GearAirdropDistributorABI,
+      provider
+    );
+
     const merkleRoot = (await contract.merkleRoot()) as string;
 
     const gearboxMerkleProofURL = `${GEARBOX_MERKLE_BASE_URL}mainnet_${

@@ -1,3 +1,4 @@
+
 # Web3 Functions Template  <!-- omit in toc -->
 Use this template to write, test and deploy Web3 Functions.
 
@@ -112,7 +113,6 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
 }
 ```
 
-
 ## Test your web3 function
 
 ### Calling your web3 function
@@ -124,6 +124,7 @@ Web3Function.onRun(async (context: Web3FunctionContext) => {
   - `--debug` Show Runtime debug messages
   - `--chain-id=[number]` Specify the chainId to be used for your Web3 Function (default: `5` for Goerli)
   - `--user-args=[key]:[value]` Set your Web3 Function user args
+
 
 - Example:<br/> `npx w3f test src/web3-functions/examples/oracle/index.ts --show-logs`
 - Output:

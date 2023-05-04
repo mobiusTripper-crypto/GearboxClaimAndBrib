@@ -129,3 +129,15 @@ dmypy.json
 .pyre/
 
 .idea
+
+
+#### for gelato-web3-script
+
+# Dependency directory
+node_modules
+
+# web3 functions builds
+.tmp
+
+# VS Code
+.vscode

@@ -130,6 +130,10 @@ dmypy.json
 
 .idea
 
+# Hardhat files
+cache
+artifacts
+typechain-types
 
 #### for gelato-web3-script
 
